@@ -3,16 +3,24 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import array
-import JuliaSet
+from numexpr import evaluate
 
 
-def dgemm(a, b, c, N):
+def dgemm(a, b, c, N,numexpr_on = False):
     if type(a) == array.array:  # array.array has only 1 demension, we have to use another way to calculate it
         for i in range(N):
             for j in range(N):
                 for k in range(N):
                     c[i * N + j] = c[i * N + j] + a[i * N + k] * b[k * N + j]
-
+    elif type(a) == np.ndarray:
+        #print('a')
+        if numexpr_on == False:
+            for i in range(N):
+                for j in range(N):
+                    c[i,j]= c[i,j]+ sum(a[i,:]*b[:,j])
+        else:
+            c=traid_with_numexpr(a,b,c)
+            print(c.size)
     else:
         for i in range(N):
             for j in range(N):
@@ -20,6 +28,10 @@ def dgemm(a, b, c, N):
                     c[i][j] = c[i][j] + a[i][k] * b[k][j]
     return c
 
+
+def traid_with_numexpr(a,b,c):
+    evaluate("c+a*b",out=c)
+    return c
 
 def create_list(N):
     A = [];
@@ -46,7 +58,7 @@ def create_numpy(N):
     return A, B, C
 
 
-def measure_time(start=6,end=8, N=12):
+def measure_time(start=3,end=7, N=15,numexpr_on=False):
     """measure """
     size = np.logspace(start, end, N, base=2, dtype=int)
     print(size)
@@ -77,7 +89,7 @@ def measure_time(start=6,end=8, N=12):
     for i in range(N):
         A_n, B_n, C_n = create_numpy(size[i])
         t1 = timer()
-        dgemm(A_n, B_n, C_n, size[i])
+        dgemm(A_n, B_n, C_n, size[i],numexpr_on=numexpr_on)
         t2 = timer()
         t_record3[i] = t2 - t1
         f_record3[i] = 2 * size[i] ** 3 / (1000000 * t_record3[i])
@@ -87,23 +99,23 @@ def measure_time(start=6,end=8, N=12):
     # fig, plt = plt.subplots(figsize=(8.4, 6.4))
     plt.semilogx(size, t_record1, label='list')
     plt.semilogx(size, t_record2, label='array')
-    plt.semilogx(size, t_record3, label='numpy')
+    plt.semilogx(size, t_record3, label='numpy with numexpr')
     plt.xlabel('size in width ')
     plt.ylabel('operation time  in seconds ')
-    plt.title('operation time VS size in with')
+    plt.title('operation time VS size in width')
     plt.legend()
-    plt.savefig("{}.png".format('time_vs_size'))
+    plt.savefig("{}.png".format('time_vs_size1'))
 
     plt.figure(figsize=(8.4, 6.4))
     # fig, plt = plt.subplots(figsize=(8.4, 6.4))
-    plt.semilogx(size, t_record1, label='list')
-    plt.semilogx(size, t_record2, label='array')
-    plt.semilogx(size, t_record3, label='numpy')
+    plt.semilogx(size, f_record1, label='list')
+    plt.semilogx(size, f_record2, label='array')
+    plt.semilogx(size, f_record3, label='numpy')
     plt.xlabel('size in width ')
     plt.ylabel('operation speed  in MFLOPS/s ')
-    plt.title('operation time VS size in with')
+    plt.title('operation speed VS size in width')
     plt.legend()
-    plt.savefig("{}.png".format('speed_vs_size'))
+    plt.savefig("{}.png".format('speed_vs_size1'))
 
 
 
@@ -115,5 +127,10 @@ if __name__ == "__main__":
     a_l = [[1.0, 1.1], [1.2, 1.3]]
     b_l = [[1.2, 1.3], [1.4, 1.5]]
     c_l = [[0.0, 0.0], [0.0, 0.0]]
-    # A, B, C = create_array_matrixes(N)
+    A, B, C = create_numpy(N)
+    #print(A)
+    #print(B)
+    #C=dgemm(A,B,C,N)
+    #print(C)
     measure_time()
+    #measure_time(numexpr_on=True)
